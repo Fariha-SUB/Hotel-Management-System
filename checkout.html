@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check Out</title>
+    
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+
+<div class="page-container">
+    <div class="page-header">
+        <h1><i class="fas fa-sign-out-alt"></i> Check Out</h1>
+    </div>
+
+    <!-- Quick Check-out Form -->
+    <div class="card">
+        <h3><i class="fas fa-door-open"></i> Quick Check-Out</h3>
+        <form onsubmit="quickCheckout(event)">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Guest Name / Room Number</label>
+                    <input type="text" id="searchGuest" class="form-control" placeholder="Type guest name or room number..." onkeyup="searchBookings()">
+                </div>
+                <div class="form-group">
+                    <label>Select Active Booking</label>
+                    <select id="bookingSelect" class="form-control" required onchange="loadBookingDetails()">
+                        <option value="">-- Select a booking --</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div id="bookingDetails" style="display:none;">
+                <div class="booking-info-card">
+                    <div class="booking-info-row">
+                        <span><i class="fas fa-user"></i> Guest:</span>
+                        <strong id="detailGuestName"></strong>
+                    </div>
+                    <div class="booking-info-row">
+                        <span><i class="fas fa-door-open"></i> Room:</span>
+                        <strong id="detailRoomNumber"></strong>
+                    </div>
+                    <div class="booking-info-row">
+                        <span><i class="fas fa-calendar-check"></i> Check-in:</span>
+                        <strong id="detailCheckIn"></strong>
+                    </div>
+                    <div class="booking-info-row">
+                        <span><i class="fas fa-calendar-times"></i> Check-out:</span>
+                        <strong id="detailCheckOut"></strong>
+                    </div>
+                    <div class="booking-info-row">
+                        <span><i class="fas fa-bed"></i> Nights:</span>
+                        <strong id="detailNights"></strong>
+                    </div>
+                    <div class="booking-info-row total-row">
+                        <span><i class="fas fa-dollar-sign"></i> Total Amount:</span>
+                        <strong id="detailTotal" style="color:#e74c3c; font-size:20px;"></strong>
+                    </div>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn-checkout" id="checkoutBtn" style="display:none;">
+                <i class="fas fa-check-circle"></i> Confirm Check-Out
+            </button>
+        </form>
+    </div>
+
+    <!-- Today's Checkouts List -->
+    <div class="card">
+        <h3><i class="fas fa-calendar-times"></i> Today's Checkouts</h3>
+        <div id="todayCheckoutsList" class="checkouts-list"></div>
+    </div>
+</div>
+
+<style>
+.page-container { padding: 20px; max-width: 800px; margin: 0 auto; }
+.card { background: white; border-radius: 20px; padding: 24px; margin-bottom: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: #1e2a3e; }
+.form-control { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 12px; font-size: 14px; }
+.form-control:focus { outline: none; border-color: #e74c3c; }
+.btn-checkout { background: #e74c3c; color: white; padding: 12px 28px; border: none; border-radius: 30px; cursor: pointer; font-weight: 600; width: 100%; margin-top: 20px; transition: all 0.3s; }
+.btn-checkout:hover { background: #c0392b; transform: scale(1.02); }
+.checkouts-list { max-height: 400px; overflow-y: auto; }
+.checkout-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; margin-bottom: 10px; background: #f8f9fa; border-radius: 12px; border-left: 4px solid #e74c3c; }
+.checkout-time { background: #e74c3c; color: white; padding: 5px 15px; border-radius: 20px; font-size: 12px; }
+.booking-info-card { background: #f8f9fa; border-radius: 16px; padding: 20px; margin-top: 20px; }
+.booking-info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e0e0e0; }
+.booking-info-row:last-child { border-bottom: none; }
+.total-row { margin-top: 10px; padding-top: 10px; border-top: 2px solid #e74c3c; }
+.empty-state { text-align: center; padding: 40px; color: #8aa4b8; }
+</style>
+
+<script>
+// ডিফল্ট রুম ডাটা
+function initRooms() {
+    let rooms = localStorage.getItem('hotel_rooms');
+    if (!rooms) {
+        const defaultRooms = [
+            { id: 1, number: '101', type: 'Standard', status: 'available', price: 120 },
+            { id: 2, number: '102', type: 'Standard', status: 'available', price: 120 },
+            { id: 3, number: '201', type: 'Deluxe', status: 'available', price: 180 },
+            { id: 4, number: '202', type: 'Executive', status: 'available', price: 250 }
+        ];
+        localStorage.setItem('hotel_rooms', JSON.stringify(defaultRooms));
+    }
+}
+
+// ডিফল্ট বুকিং ডাটা তৈরি করুন
+function initBookings() {
+    let bookings = localStorage.getItem('hotel_bookings');
+    if (!bookings || JSON.parse(bookings).length === 0) {
+        const defaultBookings = [
+            { id: 'BK1001', guestName: 'Sophia Martin', roomNumber: '101', roomId: 1, checkIn: '2026-04-25', checkOut: '2026-04-30', status: 'active', roomPrice: 120, extraCharges: 0 },
+            { id: 'BK1002', guestName: 'Liam Johnson', roomNumber: '102', roomId: 2, checkIn: '2026-04-27', checkOut: '2026-05-02', status: 'active', roomPrice: 120, extraCharges: 50 },
+            { id: 'BK1003', guestName: 'Emily Clark', roomNumber: '201', roomId: 3, checkIn: '2026-04-28', checkOut: '2026-04-30', status: 'active', roomPrice: 180, extraCharges: 0 }
+        ];
+        localStorage.setItem('hotel_bookings', JSON.stringify(defaultBookings));
+    }
+}
+
+// অ্যাকটিভ বুকিং লোড করুন
+function loadActiveBookings() {
+    const bookings = JSON.parse(localStorage.getItem('hotel_bookings')) || [];
+    const activeBookings = bookings.filter(b => b.status === 'active');
+    const select = document.getElementById('bookingSelect');
+    
+    if (activeBookings.length === 0) {
+        select.innerHTML = '<option value="">-- No active bookings --</option>';
+        return;
+    }
+    
+    select.innerHTML = '<option value="">-- Select a booking --</option>' + 
+        activeBookings.map(b => `<option value="${b.id}">${b.guestName} - Room ${b.roomNumber} (Check-out: ${b.checkOut})</option>`).join('');
+}
+
+// সার্চ ফাংশন
+function searchBookings() {
+    const searchTerm = document.getElementById('searchGuest').value.toLowerCase();
+    const bookings = JSON.parse(localStorage.getItem('hotel_bookings')) || [];
+    const activeBookings = bookings.filter(b => b.status === 'active');
+    
+    const filtered = activeBookings.filter(b => 
+        b.guestName.toLowerCase().includes(searchTerm) || 
+        b.roomNumber.includes(searchTerm)
+    );
+    
+    const select = document.getElementById('bookingSelect');
+    
+    if (filtered.length === 0 && searchTerm !== '') {
+        select.innerHTML = '<option value="">-- No matching bookings --</option>';
+        return;
+    } else if (searchTerm === '') {
+        loadActiveBookings();
+        return;
+    }
+    
+    select.innerHTML = '<option value="">-- Select a booking --</option>' + 
+        filtered.map(b => `<option value="${b.id}">${b.guestName} - Room ${b.roomNumber} (Check-out: ${b.checkOut})</option>`).join('');
+    
+    if (filtered.length === 1) {
+        select.value = filtered[0].id;
+        loadBookingDetails();
+    }
+}
+
+// বুকিং ডিটেইল লোড করুন
+function loadBookingDetails() {
+    const bookingId = document.getElementById('bookingSelect').value;
+    if (!bookingId) {
+        document.getElementById('bookingDetails').style.display = 'none';
+        document.getElementById('checkoutBtn').style.display = 'none';
+        return;
+    }
+    
+    const bookings = JSON.parse(localStorage.getItem('hotel_bookings')) || [];
+    const booking = bookings.find(b => b.id === bookingId);
+    
+    if (booking) {
+        const checkIn = new Date(booking.checkIn);
+        const checkOut = new Date(booking.checkOut);
+        const nights = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
+        const roomTotal = nights * (booking.roomPrice || 120);
+        const total = roomTotal + (booking.extraCharges || 0);
+        
+        document.getElementById('detailGuestName').innerText = booking.guestName;
+        document.getElementById('detailRoomNumber').innerText = booking.roomNumber;
+        document.getElementById('detailCheckIn').innerText = booking.checkIn;
+        document.getElementById('detailCheckOut').innerText = booking.checkOut;
+        document.getElementById('detailNights').innerText = nights + ' nights';
+        document.getElementById('detailTotal').innerText = '$' + total;
+        
+        document.getElementById('bookingDetails').style.display = 'block';
+        document.getElementById('checkoutBtn').style.display = 'block';
+    }
+}
+
+// কোয়িক চেকআউট ফাংশন
+function quickCheckout(event) {
+    event.preventDefault();
+    
+    const bookingId = document.getElementById('bookingSelect').value;
+    if (!bookingId) {
+        alert('Please select a booking');
+        return;
+    }
+    
+    if (confirm('Are you sure you want to check out this guest?')) {
+        let bookings = JSON.parse(localStorage.getItem('hotel_bookings'));
+        const bookingIndex = bookings.findIndex(b => b.id === bookingId);
+        
+        if (bookingIndex !== -1) {
+            const booking = bookings[bookingIndex];
+            bookings[bookingIndex].status = 'completed';
+            localStorage.setItem('hotel_bookings', JSON.stringify(bookings));
+            
+            // রুম স্ট্যাটাস আপডেট করুন
+            let rooms = JSON.parse(localStorage.getItem('hotel_rooms')) || [];
+            const roomIndex = rooms.findIndex(r => r.id == booking.roomId);
+            if (roomIndex !== -1) {
+                rooms[roomIndex].status = 'available';
+                localStorage.setItem('hotel_rooms', JSON.stringify(rooms));
+            }
+            
+            // চেকআউট লিস্টে যোগ করুন
+            let checkouts = JSON.parse(localStorage.getItem('hotel_checkouts')) || [];
+            const newCheckout = {
+                id: Date.now(),
+                guestName: booking.guestName,
+                roomNumber: booking.roomNumber,
+                checkoutDate: new Date().toISOString().split('T')[0],
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
+            checkouts.push(newCheckout);
+            localStorage.setItem('hotel_checkouts', JSON.stringify(checkouts));
+            
+            alert(`Check-out successful for ${booking.guestName}`);
+            
+            // ফর্ম রিসেট করুন
+            document.getElementById('searchGuest').value = '';
+            document.getElementById('bookingSelect').innerHTML = '<option value="">-- Select a booking --</option>';
+            document.getElementById('bookingDetails').style.display = 'none';
+            document.getElementById('checkoutBtn').style.display = 'none';
+            
+            loadActiveBookings();
+            displayTodayCheckouts();
+        }
+    }
+}
+
+// আজকের চেকআউট দেখান
+function displayTodayCheckouts() {
+    const checkouts = JSON.parse(localStorage.getItem('hotel_checkouts')) || [];
+    const today = new Date().toISOString().split('T')[0];
+    const todayCheckouts = checkouts.filter(c => c.checkoutDate === today);
+    const container = document.getElementById('todayCheckoutsList');
+    
+    if (todayCheckouts.length === 0) {
+        container.innerHTML = '<div class="empty-state">No check-outs for today</div>';
+        return;
+    }
+    
+    container.innerHTML = todayCheckouts.map(c => `
+        <div class="checkout-item">
+            <div>
+                <strong>${c.guestName}</strong><br>
+                <small>Room ${c.roomNumber}</small>
+            </div>
+            <div class="checkout-time">${c.time}</div>
+        </div>
+    `).join('');
+}
+
+// পেজ লোড হলে রান করুন
+initRooms();
+initBookings();
+loadActiveBookings();
+displayTodayCheckouts();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Booking Management</title>
+
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+
+<div class="page-container">
+    <h1><i class="fas fa-calendar-check"></i> Booking</h1>
+
+    <!-- ========== NEW BOOKING FORM ========== -->
+    <div class="card">
+        <h3><i class="fas fa-plus"></i> New Booking</h3>
+        <form onsubmit="saveBooking(event)">
+            <div class="form-row">
+                <input type="text" id="guestName" placeholder="Guest Name" required>
+                <select id="roomSelect" required>
+                    <option value="">Select Room</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <input type="date" id="checkIn" required>
+                <input type="date" id="checkOut" required>
+            </div>
+            <button type="submit" class="btn-primary">Confirm Booking</button>
+        </form>
+    </div>
+
+    <!-- ========== BOOKING SYSTEM LIST ========== -->
+    <div class="card">
+        <h3><i class="fas fa-list"></i> All Bookings</h3>
+        <div id="bookingsList"></div>
+    </div>
+</div>
+
+<style>
+.page-container { padding: 20px; }
+.card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+.form-row { display: flex; gap: 10px; margin-bottom: 10px; }
+input, select { padding: 8px; border: 1px solid #ddd; border-radius: 6px; flex: 1; }
+.btn-primary { background: #667eea; color: white; padding: 8px 20px; border: none; border-radius: 6px; cursor: pointer; }
+.booking-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #ddd; }
+.cancel-btn { background: #e74c3c; color: white; padding: 2px 10px; border: none; border-radius: 4px; cursor: pointer; }
+</style>
+
+<script>
+function loadAvailableRooms() {
+    const rooms = JSON.parse(localStorage.getItem('hotel_rooms') || '[]');
+    const available = rooms.filter(r => r.status === 'available');
+    const select = document.getElementById('roomSelect');
+    select.innerHTML = '<option value="">Select Room</option>' + 
+        available.map(r => `<option value='${JSON.stringify(r)}'>Room ${r.number} - ${r.type}</option>`).join('');
+}
+
+function saveBooking(event) {
+    event.preventDefault();
+    const roomData = JSON.parse(document.getElementById('roomSelect').value);
+    const booking = {
+        id: 'BK' + Date.now(),
+        guestName: document.getElementById('guestName').value,
+        roomNumber: roomData.number,
+        roomId: roomData.id,
+        checkIn: document.getElementById('checkIn').value,
+        checkOut: document.getElementById('checkOut').value,
+        status: 'confirmed'
+    };
+    
+    let bookings = JSON.parse(localStorage.getItem('hotel_bookings') || '[]');
+    bookings.push(booking);
+    localStorage.setItem('hotel_bookings', JSON.stringify(bookings));
+    
+    let rooms = JSON.parse(localStorage.getItem('hotel_rooms'));
+    const index = rooms.findIndex(r => r.id === roomData.id);
+    if(index !== -1) rooms[index].status = 'occupied';
+    localStorage.setItem('hotel_rooms', JSON.stringify(rooms));
+    
+    alert('Booking confirmed!');
+    document.getElementById('guestName').value = '';
+    loadAvailableRooms();
+    loadBookings();
+}
+
+function loadBookings() {
+    const bookings = JSON.parse(localStorage.getItem('hotel_bookings') || '[]');
+    const container = document.getElementById('bookingsList');
+    
+    if(bookings.length === 0) {
+        container.innerHTML = '<div>No bookings found</div>';
+        return;
+    }
+    
+    container.innerHTML = bookings.map(b => `
+        <div class="booking-item">
+            <div><strong>${b.guestName}</strong> - Room ${b.roomNumber}<br><small>${b.checkIn} to ${b.checkOut}</small></div>
+            <button class="cancel-btn" onclick="cancelBooking('${b.id}')">Cancel</button>
+        </div>
+    `).join('');
+}
+
+function cancelBooking(id) {
+    if(confirm('Cancel this booking?')) {
+        let bookings = JSON.parse(localStorage.getItem('hotel_bookings'));
+        let rooms = JSON.parse(localStorage.getItem('hotel_rooms'));
+        const booking = bookings.find(b => b.id === id);
+        if(booking) {
+            const roomIndex = rooms.findIndex(r => r.id === booking.roomId);
+            if(roomIndex !== -1) rooms[roomIndex].status = 'available';
+            bookings = bookings.filter(b => b.id !== id);
+            localStorage.setItem('hotel_bookings', JSON.stringify(bookings));
+            localStorage.setItem('hotel_rooms', JSON.stringify(rooms));
+            loadBookings();
+            loadAvailableRooms();
+            alert('Booking cancelled');
+        }
+    }
+}
+
+loadAvailableRooms();
+loadBookings();
+</script>
+</body>
+</html>

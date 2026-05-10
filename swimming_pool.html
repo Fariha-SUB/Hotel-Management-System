@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Swimming Pool - Lodify</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="page-container">
+    <div class="page-header">
+        <h1><i class="fas fa-swimmer"></i> Swimming Pool Management</h1>
+        <button class="btn-primary" onclick="showAddSlot()"><i class="fas fa-plus"></i> Book Slot</button>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="stats-mini">
+        <div class="stat-mini-card">
+            <i class="fas fa-users" style="color: #3498db"></i>
+            <div class="stat-number" id="todayVisitors">0</div>
+            <div class="stat-label">Today's Visitors</div>
+        </div>
+        <div class="stat-mini-card">
+            <i class="fas fa-chair" style="color: #f5a623"></i>
+            <div class="stat-number" id="availableSlots">0</div>
+            <div class="stat-label">Available Slots</div>
+        </div>
+        <div class="stat-mini-card">
+            <i class="fas fa-clock" style="color: #2ecc71"></i>
+            <div class="stat-number" id="activeSessions">0</div>
+            <div class="stat-label">Active Sessions</div>
+        </div>
+    </div>
+
+    <!-- Pool Status -->
+    <div class="card">
+        <h3><i class="fas fa-chart-line"></i> Pool Status</h3>
+        <div class="pool-status">
+            <div class="pool-info">
+                <div class="pool-temp"><i class="fas fa-temperature-high"></i> Water Temp: 28°C</div>
+                <div class="pool-ph"><i class="fas fa-flask"></i> pH Level: 7.2</div>
+                <div class="pool-clean"><i class="fas fa-check-circle"></i> Last Cleaned: Today 8:00 AM</div>
+            </div>
+            <div class="capacity-meter">
+                <div class="capacity-label">Current Capacity: <span id="capacityPercent">0</span>%</div>
+                <div class="progress-bar"><div class="progress" id="capacityBar" style="width:0%"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Booking Slots -->
+    <div class="card">
+        <h3><i class="fas fa-calendar-alt"></i> Time Slots</h3>
+        <div id="slotsGrid" class="slots-grid"></div>
+    </div>
+</div>
+
+<!-- Add Slot Modal -->
+<div id="slotModal" class="modal" style="display:none">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Book Pool Slot</h3>
+            <span class="close" onclick="closeModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Guest Name</label>
+                <input type="text" id="guestName" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>Room Number</label>
+                <input type="text" id="roomNumber" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>Select Time Slot</label>
+                <select id="timeSlot" class="form-control">
+                    <option value="6:00-8:00">6:00 AM - 8:00 AM</option>
+                    <option value="8:00-10:00">8:00 AM - 10:00 AM</option>
+                    <option value="10:00-12:00">10:00 AM - 12:00 PM</option>
+                    <option value="12:00-14:00">12:00 PM - 2:00 PM</option>
+                    <option value="14:00-16:00">2:00 PM - 4:00 PM</option>
+                    <option value="16:00-18:00">4:00 PM - 6:00 PM</option>
+                    <option value="18:00-20:00">6:00 PM - 8:00 PM</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+            <button class="btn-primary" onclick="saveSlot()">Book Slot</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let poolBookings = [];
+
+const timeSlots = ['6:00-8:00', '8:00-10:00', '10:00-12:00', '12:00-14:00', '14:00-16:00', '16:00-18:00', '18:00-20:00'];
+
+function loadPoolBookings() {
+    const saved = localStorage.getItem('pool_bookings');
+    if(saved) {
+        poolBookings = JSON.parse(saved);
+    } else {
+        poolBookings = [
+            { id: 1, guestName: 'Sophia Martin', roomNumber: '205', timeSlot: '10:00-12:00', date: '2026-05-02', status: 'active' },
+            { id: 2, guestName: 'Liam Johnson', roomNumber: '312', timeSlot: '14:00-16:00', date: '2026-05-02', status: 'active' }
+        ];
+        localStorage.setItem('pool_bookings', JSON.stringify(poolBookings));
+    }
+    displaySlots();
+    updateStats();
+}
+
+function displaySlots() {
+    const container = document.getElementById('slotsGrid');
+    const today = new Date().toISOString().split('T')[0];
+    const todayBookings = poolBookings.filter(b => b.date === today);
+    
+    container.innerHTML = timeSlots.map(slot => {
+        const bookingsInSlot = todayBookings.filter(b => b.timeSlot === slot);
+        const available = 5 - bookingsInSlot.length;
+        const isAvailable = available > 0;
+        
+        return `
+            <div class="slot-card ${isAvailable ? 'available' : 'full'}">
+                <div class="slot-time">${slot}</div>
+                <div class="slot-capacity">${bookingsInSlot.length}/5 booked</div>
+                <div class="slot-guests">
+                    ${bookingsInSlot.map(b => `<span>${b.guestName} (Rm ${b.roomNumber})</span>`).join('')}
+                </div>
+                ${isAvailable ? `<button class="book-slot-btn" onclick="showAddSlot('${slot}')">Book Slot</button>` : '<div class="full-badge">Full</div>'}
+            </div>
+        `;
+    }).join('');
+}
+
+function updateStats() {
+    const today = new Date().toISOString().split('T')[0];
+    const todayBookings = poolBookings.filter(b => b.date === today);
+    const totalBooked = todayBookings.length;
+    const maxCapacity = timeSlots.length * 5;
+    
+    document.getElementById('todayVisitors').innerText = totalBooked;
+    document.getElementById('availableSlots').innerText = maxCapacity - totalBooked;
+    document.getElementById('activeSessions').innerText = poolBookings.filter(b => b.status === 'active').length;
+    
+    const capacityPercent = (totalBooked / maxCapacity) * 100;
+    document.getElementById('capacityPercent').innerText = Math.round(capacityPercent);
+    document.getElementById('capacityBar').style.width = capacityPercent + '%';
+}
+
+function showAddSlot(slot = '') {
+    document.getElementById('guestName').value = '';
+    document.getElementById('roomNumber').value = '';
+    if(slot) {
+        document.getElementById('timeSlot').value = slot;
+    }
+    document.getElementById('slotModal').style.display = 'block';
+}
+
+function saveSlot() {
+    const newBooking = {
+        id: Date.now(),
+        guestName: document.getElementById('guestName').value,
+        roomNumber: document.getElementById('roomNumber').value,
+        timeSlot: document.getElementById('timeSlot').value,
+        date: new Date().toISOString().split('T')[0],
+        status: 'active'
+    };
+    
+    if(!newBooking.guestName || !newBooking.roomNumber) {
+        alert('Please fill all fields');
+        return;
+    }
+    
+    // Check capacity
+    const todayBookings = poolBookings.filter(b => b.date === newBooking.date && b.timeSlot === newBooking.timeSlot);
+    if(todayBookings.length >= 5) {
+        alert('This time slot is fully booked!');
+        return;
+    }
+    
+    poolBookings.push(newBooking);
+    localStorage.setItem('pool_bookings', JSON.stringify(poolBookings));
+    closeModal();
+    displaySlots();
+    updateStats();
+    alert('Pool slot booked successfully!');
+}
+
+function closeModal() {
+    document.getElementById('slotModal').style.display = 'none';
+}
+
+loadPoolBookings();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InnovaStay - Generate Bills & Payment Tracking</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+    <style>
+
+        *{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
+            font-family:Arial, sans-serif;
+        }
+
+        body{
+            background:#f4f7fc;
+            padding:30px;
+        }
+
+        .container{
+            max-width:1200px;
+            margin:auto;
+        }
+
+        .page-header{
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            margin-bottom:25px;
+        }
+
+        .page-header h1{
+            color:#1e293b;
+        }
+
+        .btn-primary{
+            background:#2563eb;
+            color:white;
+            border:none;
+            padding:12px 20px;
+            border-radius:8px;
+            cursor:pointer;
+        }
+
+        .btn-primary:hover{
+            background:#1d4ed8;
+        }
+
+        .card{
+            background:white;
+            padding:25px;
+            border-radius:12px;
+            margin-bottom:25px;
+            box-shadow:0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .card h3{
+            margin-bottom:20px;
+            color:#0f172a;
+        }
+
+        .form-group{
+            margin-bottom:18px;
+        }
+
+        label{
+            display:block;
+            margin-bottom:8px;
+            font-weight:bold;
+        }
+
+        input,
+        select{
+            width:100%;
+            padding:12px;
+            border:1px solid #cbd5e1;
+            border-radius:8px;
+            outline:none;
+        }
+
+        input:focus,
+        select:focus{
+            border-color:#2563eb;
+        }
+
+        .btn-success{
+            background:#16a34a;
+            color:white;
+            border:none;
+            padding:12px 20px;
+            border-radius:8px;
+            cursor:pointer;
+        }
+
+        .btn-success:hover{
+            background:#15803d;
+        }
+
+        table{
+            width:100%;
+            border-collapse:collapse;
+            margin-top:20px;
+        }
+
+        table th,
+        table td{
+            padding:14px;
+            border-bottom:1px solid #ddd;
+            text-align:left;
+        }
+
+        table th{
+            background:#2563eb;
+            color:white;
+        }
+
+        .paid{
+            color:green;
+            font-weight:bold;
+        }
+
+        .pending{
+            color:red;
+            font-weight:bold;
+        }
+
+        .download-btn{
+            background:#16a34a;
+            color:white;
+            border:none;
+            padding:8px 14px;
+            border-radius:6px;
+            cursor:pointer;
+        }
+
+        .download-btn:hover{
+            background:#15803d;
+        }
+
+        .bill-item{
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            padding:15px;
+            border:1px solid #ddd;
+            border-radius:10px;
+            margin-bottom:12px;
+        }
+
+        .generate-bill-btn{
+            background:#2563eb;
+            color:white;
+            border:none;
+            padding:10px 16px;
+            border-radius:6px;
+            cursor:pointer;
+        }
+
+        .search-results{
+            margin-top:15px;
+        }
+
+        .search-item{
+            background:#f8fafc;
+            padding:14px;
+            border-radius:8px;
+            margin-bottom:10px;
+            cursor:pointer;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+        }
+
+        .search-item:hover{
+            background:#e2e8f0;
+        }
+
+        .modal{
+            position:fixed;
+            top:0;
+            left:0;
+            width:100%;
+            height:100%;
+            background:rgba(0,0,0,0.6);
+            display:flex;
+            justify-content:center;
+            align-items:center;
+        }
+
+        .modal-content{
+            background:white;
+            width:700px;
+            max-width:95%;
+            border-radius:12px;
+            overflow:hidden;
+        }
+
+        .modal-header,
+        .modal-footer{
+            padding:20px;
+            background:#f1f5f9;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+        }
+
+        .modal-body{
+            padding:25px;
+        }
+
+        .close{
+            font-size:24px;
+            cursor:pointer;
+        }
+
+        .bill-header{
+            text-align:center;
+            margin-bottom:25px;
+        }
+
+        .bill-info-row{
+            display:flex;
+            justify-content:space-between;
+            margin-bottom:10px;
+        }
+
+        .bill-total{
+            display:flex;
+            justify-content:space-between;
+            margin-top:20px;
+            font-size:22px;
+            font-weight:bold;
+        }
+
+        .bill-footer{
+            text-align:center;
+            margin-top:30px;
+            color:#64748b;
+        }
+
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="page-header">
+        <h1><i class="fas fa-receipt"></i> Generate Bills & Payment Tracking</h1>
+
+        <button class="btn-primary" onclick="window.print()">
+            <i class="fas fa-print"></i> Print Page
+        </button>
+    </div>
+
+    <!-- Generate Bill Form -->
+
+    <div class="card">
+
+        <h3><i class="fas fa-file-invoice"></i> Generate New Bill</h3>
+
+        <form id="billForm">
+
+            <div class="form-group">
+                <label>Customer Name</label>
+                <input type="text" id="customerName" required>
+            </div>
+
+            <div class="form-group">
+                <label>Room Number</label>
+                <input type="text" id="roomNumber" required>
+            </div>
+
+            <div class="form-group">
+                <label>Total Amount ($)</label>
+                <input type="number" id="amount" required>
+            </div>
+
+            <div class="form-group">
+                <label>Payment Status</label>
+
+                <select id="paymentStatus">
+                    <option value="Paid">Paid</option>
+                    <option value="Pending">Pending</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn-success">
+                <i class="fas fa-plus-circle"></i> Generate Bill
+            </button>
+
+        </form>
+
+    </div>
+
+    <!-- Search Booking -->
+
+    <div class="card">
+
+        <h3><i class="fas fa-search"></i> Search Bill</h3>
+
+        <input type="text"
+               id="searchInput"
+               placeholder="Search by customer or room..."
+               onkeyup="searchBills()">
+
+        <div id="searchResults" class="search-results"></div>
+
+    </div>
+
+    <!-- Active Bookings -->
+
+<div class="card">
+
+    <h3>
+        <i class="fas fa-calendar-check"></i>
+        Active Bookings
+    </h3>
+
+    <div id="activeBookings">
+
+        <div class="bill-item">
+
+            <div>
+                <strong>John Doe</strong><br>
+                <small>
+                    Room 205 | 2026-05-01 to 2026-05-05
+                </small>
+            </div>
+
+            <button class="generate-bill-btn"
+                    onclick="autoFillBill(
+                    'John Doe',
+                    '205',
+                    450
+                    )">
+
+                Generate Bill
+
+            </button>
+
+        </div>
+
+        <div class="bill-item">
+
+            <div>
+                <strong>Sarah Khan</strong><br>
+                <small>
+                    Room 307 | 2026-05-03 to 2026-05-08
+                </small>
+            </div>
+
+            <button class="generate-bill-btn"
+                    onclick="autoFillBill(
+                    'Sarah Khan',
+                    '307',
+                    320
+                    )">
+
+                Generate Bill
+
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+    <!-- Payment Tracking -->
+
+    <div class="card">
+
+        <h3><i class="fas fa-money-check-alt"></i> Payment Tracking</h3>
+
+        <table>
+
+            <thead>
+
+            <tr>
+                <th>Invoice ID</th>
+                <th>Customer</th>
+                <th>Room</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Invoice</th>
+            </tr>
+
+            </thead>
+
+            <tbody id="billTableBody">
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+<!-- Bill Modal -->
+
+<div id="billModal" class="modal" style="display:none;">
+
+    <div class="modal-content">
+
+        <div class="modal-header">
+
+            <h3><i class="fas fa-file-invoice"></i> Invoice</h3>
+
+            <span class="close" onclick="closeModal()">&times;</span>
+
+        </div>
+
+        <div class="modal-body" id="billContent">
+
+        </div>
+
+        <div class="modal-footer">
+
+            <button class="btn-primary" onclick="printBill()">
+                <i class="fas fa-print"></i> Print
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+
+    let bills = [];
+
+    function generateInvoiceId() {
+        return 'INV-' + Math.floor(Math.random() * 100000);
+    }
+
+    document.getElementById('billForm').addEventListener('submit', function(e){
+
+        e.preventDefault();
+
+        const customer = document.getElementById('customerName').value;
+        const room = document.getElementById('roomNumber').value;
+        const amount = document.getElementById('amount').value;
+        const status = document.getElementById('paymentStatus').value;
+
+        const bill = {
+            invoiceId: generateInvoiceId(),
+            customer,
+            room,
+            amount,
+            status
+        };
+
+        bills.push(bill);
+
+        displayBills();
+
+        this.reset();
+
+        alert('Bill Generated Successfully!');
+
+    });
+
+    function displayBills(){
+
+        const tableBody = document.getElementById('billTableBody');
+
+        tableBody.innerHTML = '';
+
+        bills.forEach((bill,index)=>{
+
+            tableBody.innerHTML += `
+
+            <tr>
+
+                <td>${bill.invoiceId}</td>
+
+                <td>${bill.customer}</td>
+
+                <td>${bill.room}</td>
+
+                <td>$${bill.amount}</td>
+
+                <td class="${bill.status === 'Paid' ? 'paid' : 'pending'}">
+                    ${bill.status}
+                </td>
+
+                <td>
+                    <button class="download-btn"
+                            onclick="viewBill(${index})">
+                        View Invoice
+                    </button>
+                </td>
+
+            </tr>
+
+            `;
+
+        });
+
+    }
+
+    function searchBills(){
+
+        const term = document.getElementById('searchInput')
+                    .value
+                    .toLowerCase();
+
+        const results = bills.filter(bill =>
+            bill.customer.toLowerCase().includes(term)
+            ||
+            bill.room.toLowerCase().includes(term)
+        );
+
+        const container = document.getElementById('searchResults');
+
+        if(term === ''){
+            container.innerHTML = '';
+            return;
+        }
+
+        if(results.length === 0){
+
+            container.innerHTML = `
+                <div class="search-item">
+                    No results found
+                </div>
+            `;
+
+            return;
+        }
+
+        container.innerHTML = results.map((bill,index)=>`
+
+            <div class="search-item"
+                 onclick="viewBill(${index})">
+
+                <div>
+                    <strong>${bill.customer}</strong><br>
+                    Room ${bill.room}
+                </div>
+
+                <i class="fas fa-chevron-right"></i>
+
+            </div>
+
+        `).join('');
+
+    }
+
+    function viewBill(index){
+
+        const bill = bills[index];
+
+        const html = `
+
+            <div class="bill-header">
+
+                <h2>InnovaStay Hotel</h2>
+
+                <p>Premium Hotel Management System</p>
+
+            </div>
+
+            <div class="bill-info">
+
+                <div class="bill-info-row">
+                    <strong>Invoice ID:</strong>
+                    <span>${bill.invoiceId}</span>
+                </div>
+
+                <div class="bill-info-row">
+                    <strong>Customer:</strong>
+                    <span>${bill.customer}</span>
+                </div>
+
+                <div class="bill-info-row">
+                    <strong>Room Number:</strong>
+                    <span>${bill.room}</span>
+                </div>
+
+                <div class="bill-info-row">
+                    <strong>Payment Status:</strong>
+                    <span>${bill.status}</span>
+                </div>
+
+                <div class="bill-total">
+                    <span>Total Amount</span>
+                    <span>$${bill.amount}</span>
+                </div>
+
+            </div>
+
+            <div class="bill-footer">
+
+                <p>Thank you for choosing InnovaStay!</p>
+
+            </div>
+
+        `;
+
+        document.getElementById('billContent').innerHTML = html;
+
+        document.getElementById('billModal').style.display = 'flex';
+
+    }
+
+    function closeModal(){
+
+        document.getElementById('billModal').style.display = 'none';
+
+    }
+
+    function printBill(){
+
+        const content =
+            document.getElementById('billContent').innerHTML;
+
+        const win = window.open('', '', 'width=800,height=700');
+
+       
+        
+    }
+
+</script>
+
+</body>
+</html>

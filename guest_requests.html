@@ -1,0 +1,196 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guest Requests</title>
+    
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+
+<div class="page-container">
+    <div class="page-header">
+        <h1><i class="fas fa-bell"></i> Guest Requests</h1>
+        <button  class="btn-primary" onclick="showNewRequest()">
+            <i class="fas fa-plus"></i> New Request
+        </button>
+    </div>
+
+    <!-- Pending Requests -->
+    <div class="card">
+        <h3><i class="fas fa-clock"></i> Pending Requests</h3>
+        <div id="pendingRequests" class="requests-list"></div>
+    </div>
+
+    <!-- Completed Requests -->
+    <div class="card">
+        <h3><i class="fas fa-check-circle"></i> Completed Requests</h3>
+        <div id="completedRequests" class="requests-list"></div>
+    </div>
+</div>
+
+<!-- New Request Modal -->
+<div id="requestModal" class="modal" style="display:none">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>New Guest Request</h3>
+            <span class="close" onclick="closeModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Guest Name</label>
+                <input type="text" id="reqGuestName" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>Room Number</label>
+                <input type="text" id="reqRoomNo" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>Request Type</label>
+                <select id="reqType" class="form-control">
+                    <option>Extra Towels</option>
+                    <option>Pillow Menu</option>
+                    <option>Wake-up Call</option>
+                    <option>Room Service</option>
+                    <option>Maintenance</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+            <button class="btn-primary" onclick="saveRequest()">Submit</button>
+        </div>
+    </div>
+</div>
+
+<style>
+.requests-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+.request-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    margin-bottom: 10px;
+    background: #f8f9fa;
+    border-radius: 12px;
+}
+.complete-btn {
+    background: #2ecc71;
+    color: white;
+    padding: 6px 16px;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+}
+</style>
+
+<script>
+let requests = [];
+
+function loadRequests() {
+    const saved = localStorage.getItem('hotel_requests');
+    if(saved) {
+        requests = JSON.parse(saved);
+    } else {
+        requests = [
+            { id: 1, guestName: 'John Doe', roomNo: '101', type: 'Extra Towels', status: 'pending', time: '2026-04-29 10:30' },
+            { id: 2, guestName: 'Jane Smith', roomNo: '202', type: 'Pillow Menu', status: 'pending', time: '2026-04-29 11:15' }
+        ];
+        localStorage.setItem('hotel_requests', JSON.stringify(requests));
+    }
+    displayRequests();
+}
+
+function displayRequests() {
+    const pending = requests.filter(r => r.status === 'pending');
+    const completed = requests.filter(r => r.status === 'completed');
+    
+    const pendingContainer = document.getElementById('pendingRequests');
+    const completedContainer = document.getElementById('completedRequests');
+    
+    pendingContainer.innerHTML = pending.map(r => `
+        <div class="request-item">
+            <div>
+                <strong>${r.guestName}</strong> - Room ${r.roomNo}
+                <br><small>${r.type}</small>
+            </div>
+            <button class="complete-btn" onclick="completeRequest(${r.id})">Complete</button>
+        </div>
+    `).join('');
+    
+    if(pending.length === 0) pendingContainer.innerHTML = '<div class="empty-state">No pending requests</div>';
+    
+    completedContainer.innerHTML = completed.map(r => `
+        <div class="request-item">
+            <div>
+                <strong>${r.guestName}</strong> - Room ${r.roomNo}
+                <br><small>${r.type}</small>
+            </div>
+        </div>
+    `).join('');
+}
+
+function completeRequest(id) {
+    const index = requests.findIndex(r => r.id === id);
+    if(index !== -1) {
+        requests[index].status = 'completed';
+        localStorage.setItem('hotel_requests', JSON.stringify(requests));
+        displayRequests();
+        alert('Request marked as completed');
+    }
+}
+
+function showNewRequest() {
+    document.getElementById('requestModal').style.display = 'block';
+}
+
+function saveRequest() {
+    const newRequest = {
+        id: Date.now(),
+        guestName: document.getElementById('reqGuestName').value,
+        roomNo: document.getElementById('reqRoomNo').value,
+        type: document.getElementById('reqType').value,
+        status: 'pending',
+        time: new Date().toLocaleString()
+    };
+    
+    requests.push(newRequest);
+    localStorage.setItem('hotel_requests', JSON.stringify(requests));
+    closeModal();
+    displayRequests();
+    alert('Request submitted');
+}
+
+function closeModal() {
+    document.getElementById('requestModal').style.display = 'none';
+}
+
+loadRequests();
+
+function autoDeleteOldRequests() {
+    let requests = JSON.parse(localStorage.getItem('hotel_requests')) || [];
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const filtered = requests.filter(r => {
+        if(r.status === 'completed' && new Date(r.completedDate) < thirtyDaysAgo) {
+            return false;  // 30 দিনের বেশি পুরানো হলে ডিলিট
+        }
+        return true;
+    });
+    
+    localStorage.setItem('hotel_requests', JSON.stringify(filtered));
+}
+
+// পেজ লোডে কল করুন
+autoDeleteOldRequests();
+
+</script>
+</body>
+</html>

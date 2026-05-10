@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Housekeeping Management</title>
+    
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+
+<div class="page-container">
+    <div class="page-header">
+        <h1><i class="fas fa-broom"></i> Housekeeping Management</h1>
+    </div>
+
+    <!-- Housekeeping Stats -->
+    <div class="stats-mini">
+        <div class="stat-mini-card">
+            <i class="fas fa-check-circle" style="color: #2ecc71"></i>
+            <div class="stat-number" id="cleanCount">0</div>
+            <div class="stat-label">Clean & Ready</div>
+        </div>
+        <div class="stat-mini-card">
+            <i class="fas fa-exclamation-triangle" style="color: #f39c12"></i>
+            <div class="stat-number" id="dirtyCount">0</div>
+            <div class="stat-label">To Be Cleaned</div>
+        </div>
+        <div class="stat-mini-card">
+            <i class="fas fa-clipboard-list" style="color: #3498db"></i>
+            <div class="stat-number" id="inspectedCount">0</div>
+            <div class="stat-label">Inspected</div>
+        </div>
+    </div>
+
+    <!-- Update Housekeeping Status -->
+    <div class="card">
+        <h3><i class="fas fa-sync-alt"></i> Update Room Status</h3>
+        <div id="roomsList" class="rooms-list"></div>
+    </div>
+</div>
+
+<style>
+.rooms-list {
+    max-height: 500px;
+    overflow-y: auto;
+}
+.hk-room-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    margin-bottom: 10px;
+    background: #f8f9fa;
+    border-radius: 12px;
+}
+.hk-status-select {
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    margin-right: 10px;
+}
+.hk-update-btn {
+    background: #667eea;
+    color: white;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+</style>
+
+<script>
+let housekeeping = {
+    clean: [],
+    dirty: [],
+    inspected: []
+};
+
+function loadHousekeeping() {
+    const rooms = JSON.parse(localStorage.getItem('hotel_rooms') || '[]');
+    const bookings = JSON.parse(localStorage.getItem('hotel_bookings') || '[]');
+    
+    // Calculate housekeeping status
+    const occupiedRooms = rooms.filter(r => r.status === 'occupied');
+    const availableRooms = rooms.filter(r => r.status === 'available');
+    
+    document.getElementById('cleanCount').innerText = availableRooms.length;
+    document.getElementById('dirtyCount').innerText = occupiedRooms.length;
+    document.getElementById('inspectedCount').innerText = Math.floor(rooms.length * 0.3);
+    
+    displayRoomStatus(rooms);
+}
+
+function displayRoomStatus(rooms) {
+    const container = document.getElementById('roomsList');
+    container.innerHTML = rooms.map(room => `
+        <div class="hk-room-item">
+            <div>
+                <strong>Room ${room.number}</strong> - ${room.type}
+                <br><small>Current: ${room.status}</small>
+            </div>
+            <div>
+                <select id="hk-status-${room.id}" class="hk-status-select">
+                    <option value="clean">Clean & Ready</option>
+                    <option value="dirty">To Be Cleaned</option>
+                    <option value="inspected">Inspected</option>
+                </select>
+                <button class="hk-update-btn" onclick="updateHousekeeping(${room.id})">Update</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function updateHousekeeping(roomId) {
+    const newStatus = document.getElementById(`hk-status-${roomId}`).value;
+    alert(`Room ${roomId} status updated to ${newStatus}`);
+    // Here you would save to localStorage or database
+}
+
+loadHousekeeping();
+console.log('Housekeeping management loaded');
+console.log('Current housekeeping data:', housekeeping);
+</script>
+</body>
+</html>
